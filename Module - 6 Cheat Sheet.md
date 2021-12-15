@@ -1097,3 +1097,230 @@ fetch(apiUrl).then(function(response) {
 To check if this redirect is working, update the URL in your browser's address bar from index.html to something like: single-repo.html?repo=nope. There is no "nope" repository on GitHub, which will cause a bad response when fetched, and thus trigger the redirect.
 
 6.4.6 Save Your Progress with Git
+
+              6.5.1 Introduction
+
+                  Congratulations on making it this far into your project! You've built a complete app that can take users from one page to another, transferring information along the way. This animation shows what you've done so far:
+
+                Cursor scrolling down homepage of Git it Done app, then clicking on a repository and scrolling through issues page.
+
+                Remember that we still need to tackle one more issue. We need to add buttons that allow the user to filter the repository search results by programming language, as seen in the following GitHub issue:
+
+                Final GitHub issue says users should be able to click on a language button to filter results.
+
+                Adding this capability will be possible because GitHub already allows users to search for popular repositories in a specific programming language. With over 28 million public repositories, GitHub can seem like a daunting place to start contributing to open source projects. For that reason, the site enables web developers to focus on projects that they actually have the skills to contribute to. For example, users can type something along the lines of "languages:javascript" in the search bar. Similarly, we'll add language buttons on the homepage of the Git it Done app to make it much easier to find open source projects that use familiar languages.
+
+                We'll leverage past experience by completing the following tasks:
+
+                Use data-* attributes for the buttons.
+
+                Implement event delegation when clicking buttons.
+
+                Add query string parameters to the GitHub API’s URLs.
+
+                In this lesson, we'll accomplish the following:
+
+                Recognize which options are available for GitHub API endpoints.
+
+                Use multiple parameters in a query string.
+
+                Use HTML attributes to dynamically update an API call.
+
+                Experimenting with GitHub's API and similar APIs will give you valuable insight into the kinds of use cases to anticipate when building an API with other developers. You'll face many similar decisions when you learn back-end development and create your own APIs.
+
+
+
+
+        6.5.2 Preview:
+                We’ll add three new buttons to the homepage, listing featured repositories as the following image shows:
+
+                Under original search box in Git it Done, a Search By Topic box now holds buttons for JavaScript, HTML, and CSS.
+
+                Try to organize the steps we'll take to get there:
+
+
+
+                This lesson will encompass a lot of material you've already learned, giving you an opportunity to practice both new and old skills.
+
+        6.5.3 Create a function to call the github search api:
+
+                Alright, let's build a function to call the search API. However, before we do so, let's make sure to create a new Git branch called feature/languages.
+
+                And before we spend too much time on the smaller details, we should try getting the API endpoint working. To do so, let's head over to the GitHub API docs section on searching for repos (Links to an external site.).
+
+                Note that the search method only returns up to 100 repositories. This works for our purposes, because we only need the user to view 30 or so at a time.
+
+                Direct your attention to the parameters section, as shown in the following image:
+
+                API parameters <code>q</code>, <code>sort</code>, and <code>order</code> listed on the left with the parameter type and a description listed to the right
+
+                Remember, we recently learned how to use parameters! This time, we can use them to specify that we want the search to not only include results that match the query but also sort them.
+
+                IMPORTANT
+                We should sort results when we make queries involving large collections of data. In this case, if we don't, the API could return unmaintained, unpopular repositories. We want to avoid these kinds of repositories, which can be more challenging to contribute to.
+
+                Now that we're using multiple parameters, we need to specify where the first parameter ends and the second one begins. We can do this by including the & symbol between each parameter in the URL.
+
+                With that in mind, enter the following URL in your browser:
+
+                https://api.github.com/search/repositories?q=javascript+is:featured&sort=stars
+                The result should look something like the following image:
+
+                GitHub API response after searching for featured JavaScript repos
+
+                Now try that same endpoint without the sort parameter.
+
+                Notice that the result still includes repositories with a high number of stars. This happens because the sort parameter has a default value of score in case we don't provide one. GitHub applies the score value to repositories based on their relevance to the search term and their popularity.
+
+                The GitHub API allows us to add additional parameters, known as qualifiers. For example, adding +is:featured tells the API that we only want featured repositories. That's not all, though! We can add as many qualifiers as we can think of, as long as the URL remains under 255 characters.
+
+                DEEP DIVE
+                As mentioned in the documentation, the structure for the API call will look something like this:
+
+                q=SEARCH_KEYWORD_1+SEARCH_KEYWORD_N+QUALIFIER_1+QUALIFIER_N
+                This example provided by GitHub includes two search keywords and two qualifiers, but the query itself can accept a varied number of each. The _N syntax indicates the last qualifier. A real example of this would look like the following code:
+
+                q=javascript+html+css+is:featured
+                In this case, the N keyword would be css and the N qualifier would be is:featured, because they are the last of each set of data, respectively.
+
+                DEEP DIVE
+                Now, in homepage.js, create a new function called getFeaturedRepos() that accepts a language parameter, creates an API endpoint, and makes an HTTP request to that endpoint using fetch(), as shown in the following code:
+
+                var getFeaturedRepos = function(language) {
+                  var apiUrl = "https://api.github.com/search/repositories?q=" + language + "+is:featured&sort=help-wanted-issues";
+
+                  fetch(apiUrl);
+                };
+                To verify that this endpoint works, open index.html in your browser and call getFeaturedRepos("javascript"); in the console, as shown in the following image:
+
+                The getFeaturedRepos() function is called in the console.
+
+                We didn't console log the response, but we can go to the Network tab and click on the response to view it in its entirety, like in the following image:
+
+                Response with featured repos appears in the Network tab, under Preview
+
+                Perfect! Now that we've tested the new function, we can move on to displaying the data on the page.
+      
+      6.5.4 Display the API Data on the Page
+
+                Remember that even though the fetch is successful, we still need to format that response before we display it on the page.
+
+                Let's do that now. Add a then() method and log the response to the console. Make sure to add error handling for bad responses. The code should look something like this:
+
+                var getFeaturedRepos = function(language) {
+                  var apiUrl = "https://api.github.com/search/repositories?q=" + language + "+is:featured&sort=help-wanted-issues";
+
+                  fetch(apiUrl).then(function(response) {
+                    if (response.ok) {
+                      console.log(response);
+                    } else {
+                      alert('Error: GitHub User Not Found');
+                    }
+                  });
+                };
+                You'll need to call getFeaturedRepos("javascript"); from the DevTools console again to see the response object. Note that the response is the entire HTTP response, not the JSON. Just like we did previously, we need to use a method to extract the JSON from the response, so let's update getFeaturedRepos() to parse the response and log the data to the console, as follows:
+
+                var getFeaturedRepos = function(language) {
+                  var apiUrl = "https://api.github.com/search/repositories?q=" + language + "+is:featured&sort=help-wanted-issues";
+
+                  fetch(apiUrl).then(function(response) {
+                    if (response.ok) {
+                      response.json().then(function(data) {
+                        console.log(data)
+                      });
+                    } else {
+                      alert('Error: GitHub User Not Found');
+                    }
+                  });
+                };
+                Next, in the json() method's callback function, pass data.items and the language parameter's value into displayRepos(), shown here:
+
+                var getFeaturedRepos = function(language) {
+                  var apiUrl = "https://api.github.com/search/repositories?q=" + language + "+is:featured&sort=help-wanted-issues";
+
+                  fetch(apiUrl).then(function(response) {
+                    if (response.ok) {
+                      response.json().then(function(data) {
+                        displayRepos(data.items, language);
+                      });
+                    } else {
+                      alert('Error: GitHub User Not Found');
+                    }
+                  });
+                };
+                Test the displayRepos() function by calling getFeaturedRepos("javascript"); again in the DevTools console, verifying that the featured repos appear on the page this time.
+
+                This testing of the function before we add the buttons that will control the page is vital now that we're making requests, because many more things could go wrong in the process of retrieving information from the server. Catching these bugs before working on the rest of the front end enables us to more easily narrow down what went wrong if things break.
+
+    6.5.5 Add Language Buttons in the HTML
+
+                Great job! Now you'll need to add language buttons to the HTML so that the user can easily make queries for different types of GitHub repositories. From this point forward, you might notice that you already have all of the skills you need to finish this project!
+
+                See the following image for a glimpse of the buttons we'll make:
+
+                Close-up view of the Search By Topic box with buttons for JavaScript, HTML, and CSS.
+
+                Because this looks a lot like the <div> with a class of card that holds the main search form, use that HTML as a reference to create a new <div> element right below it:
+
+                Below the <div> that holds the <form> element in the left column, create another <div> element with a class attribute value of card. That left column should now have two <div> elements with a class of card.
+
+                Inside that <div>, create an <h3> element with text content that says "Search By Topic". Give it a class attribute with two values: card-header and text-uppercase.
+
+                Right underneath the <h3> element, create another <div>, with a class attribute of card-body and an id attribute of language-buttons.
+
+                Now that we've created the card element to hold the buttons, let's go ahead and create those as well.
+
+                PAUSE
+                What can we use to keep track of the language attached to each button?
+
+                Answer
+                In the <div> with a class of card-body, let's make three <button> elements for JavaScript, HTML, and CSS, and be sure to give each one the following:
+
+                Text content for the topic it'll search for (e.g., JavaScript, HTML, CSS).
+
+                A class attribute value of btn.
+
+                A data attribute called data-language, with a value of the topic the button will search for when clicked. Make the value lowercase.
+
+                Before we move on, make sure that the new buttons look like the following image:
+
+                Close-up view of the Search By Topic box with buttons for JavaScript, HTML, and CSS.
+
+                If they don't, check for typos in the class names!
+
+  6.5.6 Call the API function when buttons are clicked 
+
+              We're almost finished. All that remains is making the call to the API every time the buttons are clicked and merging the project to the main branch on GitHub.
+
+              To do this, at the top of homepage.js, create a new variable called languageButtonsEl. Give it a value of the <div> with an id value of language-buttons.
+
+              HINT
+              Now we can add a click event listener to the <div> element that will call a new buttonClickHandler() function. Add the following at the bottom of the homepage.js file:
+
+              languageButtonsEl.addEventListener("click", buttonClickHandler);
+              REWIND
+              Why aren't we creating click listeners for each button? Think back to the concept of event delegation. Imagine that we had 15 language buttons instead of 3. That may add a lot of extra, repeated code. To keep the code DRY, we can delegate click handling on these elements to their parent elements.
+
+              Now let's create the buttonClickHandler() function somewhere above the addEventListener() expression to ensure things exist in the right order. This function should use event delegation to handle all clicks on buttons.
+
+              We'll start by creating a variable called buttonClickHandler. Give it a value of a function that accepts event as a parameter. Inside that function, create a variable called language, and give it a value of event.target.getAttribute("data-language"). Then use console.log() to log the value of language for testing purposes.
+
+              Remember, the browser's event object will have a target property that tells us exactly which HTML element was interacted with to create the event. Once we know which element we interacted with, we can use the getAttribute() method to read the data-language attribute's value assigned to the element.
+
+              The following image demonstrates the behavior you should see:
+
+              Clicking the JavaScript button displays "javascript" in the console
+
+              Now let's call the getFeaturedRepos() function and pass the value we just retrieved from data-language as the argument. Add the following if statement block to the buttonClickHandler() function right below the language variable declaration, as follows:
+
+              if (language) {
+                getFeaturedRepos(language);
+
+                // clear old content
+                repoContainerEl.textContent = "";
+              }
+              Make sure to include repoContainerEl.textContent = "" to clear out any remaining text from the repo container. Even though this line comes after getFeaturedRepos(), it will always execute first, because getFeaturedRepos() is asynchronous and will take longer to get a response from GitHub's API.
+
+              PAUSE
+              Answer
+              Now that the code is complete, take a moment to go through the app and test the various functions. Try alternating between button clicks for HTML, CSS, and JavaScript. Try filling out a username and ensure that the form still works.
